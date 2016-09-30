@@ -293,10 +293,21 @@ def find_asgs(conn, module, name=None, tags=None):
         ]
     """
 
-    try:
-        asgs = conn.describe_auto_scaling_groups()
-    except ClientError as e:
-        module.fail_json(msg=e.message, **camel_dict_to_snake_dict(e.response))
+    asgs = {'AutoScalingGroups': []}
+    next_token = None
+    while True:
+        try:
+            if next_token:
+                asg_response = conn.describe_auto_scaling_groups(NextToken=next_token)
+            else:
+                asg_response = conn.describe_auto_scaling_groups()
+        except ClientError as e:
+            module.fail_json(msg=e.message, **camel_dict_to_snake_dict(e.response))
+        asgs['AutoScalingGroups'] += asg_response['AutoScalingGroups']
+        if 'NextToken' in asg_response:
+            next_token = asg_response['NextToken']
+        else:
+            break
 
     matched_asgs = []
 
